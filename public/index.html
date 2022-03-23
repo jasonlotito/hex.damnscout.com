@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Hex Tracker</title>
+  <style>
+      :root {
+          --btnPadding: 5px;
+      }
+
+      body {
+          background-color: black;
+      }
+
+      canvas {
+          background-color: black;
+      }
+
+      button {
+          background-color: #333;
+          color: #eee;
+          font-weight: bold;
+          border: 0;
+          padding: calc(var(--btnPadding)) calc(var(--btnPadding) * 4);
+          border-radius: var(--btnPadding);
+          text-transform: capitalize;
+          font-size: 16px;
+          margin: var(--btnPadding);
+          cursor: pointer;
+      }
+
+      button:hover {
+          background-color: #666;
+      }
+  </style>
+</head>
+<body>
+
+<div id="control">
+  <button>Clear</button>
+</div>
+<div id="Terrain">
+</div>
+<hr>
+<canvas id="canvas" width="2000" height="800"/>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const a = 2 * Math.PI / 6;
+  const r = 50;
+  let hexCount = 0;
+
+  const Storage = {
+    map: [],
+    save: () => {
+      localStorage.setItem('map', JSON.stringify(Storage.map));
+    },
+    load: () => {
+      let map = localStorage.getItem('map');
+      if (!map) {
+        Storage.save();
+      } else {
+        Storage.map = JSON.parse(map);
+      }
+    },
+    clear: () => {
+      Storage.map = [];
+      Storage.save();
+    }
+  }
+
+  Storage.load();
+
+  const TERRAIN = {
+    ARCTIC: 'arctic',
+    COASTAL: 'coastal',
+    DESERT: 'desert',
+    FOREST: 'forest',
+    GRASSLAND: 'grassland',
+    HILL: 'hill',
+    MOUNTAIN: 'mountain',
+    SWAMP: 'swamp',
+    UNDERDARK: 'caves',
+    WATER: 'water',
+    URBAN: 'city',
+  }
+
+  const Terrain = {
+    type: (terrainName) => {
+      return Terrain.Types.find(type => type.name === terrainName.toLowerCase())
+    },
+    color: (terrainName) => Terrain.type(terrainName.toLowerCase()).color,
+    Types: [
+      {
+        name: TERRAIN.ARCTIC,
+        color: '#fff'
+      },
+      {
+        name: TERRAIN.COASTAL,
+        color: '#cfcf00'
+      },
+      {
+        name: TERRAIN.DESERT,
+        color: '#999900',
+      },
+      {
+        name: TERRAIN.FOREST,
+        color: '#336600',
+      },
+      {
+        name: TERRAIN.GRASSLAND,
+        color: '#009933',
+      },
+      {
+        name: TERRAIN.HILL,
+        color: '#996633',
+      },
+      {
+        name: TERRAIN.MOUNTAIN,
+        color: '#663300',
+      },
+      {
+        name: TERRAIN.SWAMP,
+        color: '#996666',
+      },
+      {
+        name: TERRAIN.UNDERDARK,
+        color: '#333',
+      },
+      {
+        name: TERRAIN.WATER,
+        color: '#336699',
+      },
+    ]
+  };
+
+  const Road = (() => {
+    
+    return {
+      Type: {
+        NONE: 'none',
+        TRAIL: 'trail',
+      },
+      create(type) {
+
+      }
+    }
+  })();
+
+  const Map = {
+    activeTerrain: TERRAIN.GRASSLAND,
+    mouseDown: false,
+    activeColor: () => Terrain.color(Map.activeTerrain),
+    generateMap: (width, height) => {
+      let hexId = 0;
+      for (let y = r; y + r * Math.sin(a) < height; y += r * Math.sin(a)) {
+        for (let x = r, j = 0; x + r * (1 + Math.cos(a)) < width; x += r * (1 + Math.cos(a)), y += (-1) ** j++ * r * Math.sin(a)) {
+          Storage.map.push({
+            id: hexId,
+            x, y,
+            type: 0,
+            path: null,
+            terrain: TERRAIN.GRASSLAND,
+            embellishment: []
+            roadType: null,
+          });
+          hexId++;
+        }
+      }
+
+      renderMap();
+    }
+  }
+
+  const terrain = document.getElementById('Terrain');
+  let generateTerrainButtons = function () {
+    Terrain.Types.forEach(type => {
+      const btn = document.createElement('button');
+      btn.innerText = type.name;
+      terrain.appendChild(btn);
+      btn.addEventListener('click', e => {
+        Map.activeTerrain = type.name;
+      });
+      type.btn = btn;
+    });
+  };
+
+  generateTerrainButtons();
+
+  // const terrainButtons = terrain.children;
+
+  const renderMap = function () {
+
+    Storage.map.forEach(hex => {
+      const myPath = new Path2D();
+      const { x, y } = hex;
+      for (let i = 0; i < 6; i++) {
+        myPath.lineTo(x + r * Math.cos(a * i), y + r * Math.sin(a * i));
+      }
+
+      myPath.closePath();
+      ctx.strokeStyle = '#333'
+      ctx.lineWidth = 4;
+      ctx.stroke(myPath);
+      ctx.fillStyle = Terrain.color(hex.terrain);
+      ctx.fill(myPath)
+      ctx.fillStyle = '#000';
+      ctx.textBaseline = 'middle'
+      ctx.textAlign = 'center';
+      ctx.fillText(hex.id.toString(10), x, y);
+      hex.path = myPath;
+    });
+
+    Storage.save();
+  };
+
+  function init() {
+    if (Storage.map.length === 0) {
+      Map.generateMap(canvas.width, canvas.height);
+    }
+  }
+
+  init();
+
+  function updateHex(x, y) {
+    Storage.map.forEach((hex) => {
+      if (hex.type === 0) {
+        if (ctx.isPointInPath(hex.path, x, y)) {
+          // ctx.fillStyle = Map.activeColor();
+          // ctx.fill(hex.path)
+          // ctx.stroke(hex.path)
+          hex.terrain = Map.activeTerrain
+        }
+      }
+    })
+
+    renderMap()
+
+  }
+
+  window.requestAnimationFrame(function draw(ts) {
+    console.log('frame')
+    renderMap();
+    // window.requestAnimationFrame(draw);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (Map.mouseDown) {
+      updateHex(e.offsetX, e.offsetY);
+    }
+  })
+
+  canvas.addEventListener('mousedown', e => {
+    updateHex(e.offsetX, e.offsetY);
+    Map.mouseDown = true;
+  });
+  canvas.addEventListener('mouseup', e => {
+    Map.mouseDown = false;
+  });
+  canvas.addEventListener('mouseout', e => {
+    Map.mouseDown = false;
+  });
+
+  setInterval(renderMap, 10);
+
+
+</script>
+</body>
+</html>
