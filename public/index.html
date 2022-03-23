@@ -45,7 +45,7 @@
 <div id="Terrain">
 </div>
 <hr>
-<canvas id="canvas" width="2000" height="800"/>
+<canvas id="canvas" width="2000" height="800"></canvas>
 
 <script>
   const canvas = document.getElementById('canvas');
@@ -139,7 +139,7 @@
   };
 
   const Road = (() => {
-    
+
     return {
       Type: {
         NONE: 'none',
@@ -165,7 +165,7 @@
             type: 0,
             path: null,
             terrain: TERRAIN.GRASSLAND,
-            embellishment: []
+            embellishment: [],
             roadType: null,
           });
           hexId++;
